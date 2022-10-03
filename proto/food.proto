@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package food;
+
+option go_package = "/proto";
+
+message FoodCard {
+    string name = 1;
+    string imageUrl = 2;
+    string description = 3;
+    string id = 4;
+    string restarauntName = 5;
+    float price = 6;
+    string restarauntUrl = 7;
+}
+
+message FoodFilter {
+    repeated string kitchenWhiteList = 1;
+    repeated string restarauntWhiteList = 2;
+    repeated string kitchenBlackList = 3;
+    repeated string restarauntBlackList = 4;
+}
+
+message FoodRequest {
+    int64 cardsNum = 1;
+    FoodFilter foodFilter = 2;
+    float longitude = 3;
+    float latitude = 4;
+}
+
+message FoodResponse {
+    repeated FoodCard foodCards = 1;
+    bool succeed = 2;
+}
+
+message FoodFromCollectionRequest {
+    int64 cardsNum = 1;
+    repeated int64 foodIds = 2;
+}
+
+message FoodFromCollectionResponse {
+    repeated FoodCard foodCards = 1;
+    bool succeed = 2;
+}
+
+service YandexFood {
+    rpc GetRandomFood(FoodRequest) returns (FoodResponse);
+    rpc GetRandomFoodFromCollection(FoodFromCollectionRequest) returns (FoodFromCollectionResponse);
+}
