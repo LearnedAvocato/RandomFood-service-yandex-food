@@ -33,22 +33,16 @@ func TestGetRestaraunts(t *testing.T) {
 	// 1. Request 1 restaraunt
 	num := 1
 	restaraunts, err := getRestaraunts(testData.latitude, testData.longitude, num)
-	log.Println("qwe", restaraunts[0].name)
+	log.Println("qwe", len(restaraunts))
 	require.Nil(t, err, fmt.Sprintf("failed to get restaraunts: %v", err))
-	/*
-		resData, err := extractRestarauntData(restaraunts)
-		require.Nil(t, err, fmt.Sprintf("failed to get restaraunts ids: %v", err))
-		assert.Equal(t, num, len(resData))
+	assert.Equal(t, num, len(restaraunts))
 
-		// 2. Request 3 restaraunts
-		num = 3
-		restaraunts, err = getRestaraunts(testData.latitude, testData.longitude, num)
-		require.Nil(t, err, fmt.Sprintf("failed to get restaraunts: %v", err))
+	// 2. Request 3 restaraunts
+	num = 3
+	restaraunts, err = getRestaraunts(testData.latitude, testData.longitude, num)
+	require.Nil(t, err, fmt.Sprintf("failed to get restaraunts: %v", err))
 
-		resData, err = extractRestarauntData(restaraunts)
-		require.Nil(t, err, fmt.Sprintf("failed to get restaraunts ids: %v", err))
-		assert.Equal(t, num, len(resData))
-	*/
+	assert.Equal(t, num, len(restaraunts))
 }
 
 func TestGetRestarauntMenu(t *testing.T) {

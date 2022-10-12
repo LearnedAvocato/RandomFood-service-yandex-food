@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -28,7 +29,7 @@ type restarauntData struct {
 
 func doGetRequest(url string) (*gabs.Container, error) {
 	client := &http.Client{
-		Timeout: 2 * time.Second,
+		Timeout: 1 * time.Second,
 	}
 
 	resp, err := client.Get(url)
@@ -48,6 +49,7 @@ func doGetRequest(url string) (*gabs.Container, error) {
 }
 
 func getRestaraunts(latitude, longitude float64, num int) ([]restarauntData, error) {
+	log.Println("request restaraunts list")
 	u, _ := url.JoinPath(apiUrl, "catalog")
 	urlStruct, _ := url.Parse(u)
 	q := urlStruct.Query()
@@ -66,7 +68,7 @@ func getRestaraunts(latitude, longitude float64, num int) ([]restarauntData, err
 
 	restaraunts := make([]restarauntData, 0, num)
 
-	for _, i := range rand.Perm(total)[:num-1] {
+	for _, i := range rand.Perm(total)[:num] {
 		el, err := data.ArrayElement(i)
 		if err != nil {
 			continue
@@ -78,6 +80,7 @@ func getRestaraunts(latitude, longitude float64, num int) ([]restarauntData, err
 }
 
 func getRestarauntMenu(slug string) (*gabs.Container, error) {
+	log.Println("request restaraunt menu")
 	u, _ := url.JoinPath(buildRestarauntUrl(slug), "menu")
 	urlStruct, _ := url.Parse(u)
 	//q := urlStruct.Query()
@@ -98,7 +101,7 @@ func extractRestarauntData(data *gabs.Container) restarauntData {
 	slug, _ := data.Search("place", "slug").Data().(string)
 
 	return restarauntData{
-		id:   fmt.Sprintf("%f", id),
+		id:   fmt.Sprintf("%d", int64(id)),
 		name: name,
 		url:  buildRestarauntUrl(slug),
 		slug: slug}
@@ -118,6 +121,7 @@ func createFoodCard(data *gabs.Container, resData restarauntData) *proto.FoodCar
 	return &foodCard
 }
 
+// process categories
 func extractRandomDish(menu *gabs.Container) (*gabs.Container, error) {
 	categories, err := menu.Search("payload", "categories").Children()
 	if err != nil {
@@ -130,6 +134,13 @@ func extractRandomDish(menu *gabs.Container) (*gabs.Container, error) {
 		return nil, err
 	}
 	return dishes[rand.Intn(len(dishes))], nil
+}
+
+func checkDishData(data *gabs.Container) error {
+	if !data.Exists("picture", "uri") {
+		return errors.New("dish has no image")
+	}
+	return nil
 }
 
 func GetRandomFood(cardsNum int, latitude, longitude float64) (*proto.FoodResponse, error) {
@@ -146,15 +157,20 @@ func GetRandomFood(cardsNum int, latitude, longitude float64) (*proto.FoodRespon
 
 		menu, err := getRestarauntMenu(data.slug)
 		if err != nil {
-			log.Printf("failed to get restaraunt menu for restaraunt with id %s: %v", data.id, err)
+			log.Printf("failed to get restaraunt menu for restaraunt with id %s and slug %s: %v", data.id, data.slug, err)
 			continue
 		}
 
 		dish, err := extractRandomDish(menu)
-		log.Println(dish.String())
+		//log.Println(dish.String())
 		if err != nil {
-			log.Printf("failed to get dishes for restaraunt with id %s: %v", data.id, err)
-			return &proto.FoodResponse{Succeed: false}, err
+			log.Printf("failed to get dishes for restaraunt with id %s and slug %s: %v", data.id, data.slug, err)
+			continue
+		}
+
+		if err := checkDishData(dish); err != nil {
+			log.Printf("invalid dish data: %v", err)
+			continue
 		}
 
 		foodCards = append(foodCards, createFoodCard(dish, data))
