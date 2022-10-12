@@ -121,17 +121,23 @@ func createFoodCard(data *gabs.Container, resData restarauntData) *proto.FoodCar
 	return &foodCard
 }
 
-// process categories
+// todo: process categories and filters
 func extractRandomDish(menu *gabs.Container) (*gabs.Container, error) {
 	categories, err := menu.Search("payload", "categories").Children()
 	if err != nil {
 		return nil, err
+	}
+	if len(categories) == 0 {
+		return nil, errors.New("empty categories")
 	}
 	randomCat := categories[rand.Intn(len(categories))]
 
 	dishes, err := randomCat.Search("items").Children()
 	if err != nil {
 		return nil, err
+	}
+	if len(dishes) == 0 {
+		return nil, errors.New("empty dishes")
 	}
 	return dishes[rand.Intn(len(dishes))], nil
 }
