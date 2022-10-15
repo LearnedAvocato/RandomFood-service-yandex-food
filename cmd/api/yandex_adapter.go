@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 	proto "yandex-food/proto/generated"
 
@@ -159,28 +160,35 @@ func GetRandomFood(cardsNum int, latitude, longitude float64) (*proto.FoodRespon
 	// Take cardsNum food cards
 	// 1 restaraunt - 1 card
 	foodCards := make([]*proto.FoodCard, 0, cardsNum)
+	var wg sync.WaitGroup
+	wg.Add(cardsNum)
 	for _, data := range restarauntDataArr {
 
-		menu, err := getRestarauntMenu(data.slug)
-		if err != nil {
-			log.Printf("failed to get restaraunt menu for restaraunt with id %s and slug %s: %v", data.id, data.slug, err)
-			continue
-		}
+		go func(data restarauntData, foodCards *[]*proto.FoodCard) {
+			defer wg.Done()
 
-		dish, err := extractRandomDish(menu)
-		//log.Println(dish.String())
-		if err != nil {
-			log.Printf("failed to get dishes for restaraunt with id %s and slug %s: %v", data.id, data.slug, err)
-			continue
-		}
+			menu, err := getRestarauntMenu(data.slug)
+			if err != nil {
+				log.Printf("failed to get restaraunt menu for restaraunt with id %s and slug %s: %v", data.id, data.slug, err)
+				return
+			}
 
-		if err := checkDishData(dish); err != nil {
-			log.Printf("invalid dish data: %v", err)
-			continue
-		}
+			dish, err := extractRandomDish(menu)
+			//log.Println(dish.String())
+			if err != nil {
+				log.Printf("failed to get dishes for restaraunt with id %s and slug %s: %v", data.id, data.slug, err)
+				return
+			}
 
-		foodCards = append(foodCards, createFoodCard(dish, data))
+			if err := checkDishData(dish); err != nil {
+				log.Printf("invalid dish data: %v", err)
+				return
+			}
+
+			*foodCards = append(*foodCards, createFoodCard(dish, data))
+		}(data, &foodCards)
 	}
+	wg.Wait()
 	log.Printf("got %d cards when %d were requested", len(foodCards), cardsNum)
 
 	return &proto.FoodResponse{
