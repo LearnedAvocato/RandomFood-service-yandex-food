@@ -23,14 +23,16 @@ message FoodFilter {
 
 message FoodRequest {
     int64 cardsNum = 1;
-    FoodFilter foodFilter = 2;
+    repeated string selectedTags = 2;
     float longitude = 3;
     float latitude = 4;
+    bool getTags = 5;
 }
 
 message FoodResponse {
     repeated FoodCard foodCards = 1;
-    bool succeed = 2;
+    repeated string availableTags = 2;
+    bool succeed = 3;
 }
 
 message FoodFromCollectionRequest {

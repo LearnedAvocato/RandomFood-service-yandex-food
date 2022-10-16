@@ -18,8 +18,10 @@ func (f *YandexFoodServer) GetRandomFood(ctx context.Context, req *proto.FoodReq
 	cardsNum := req.GetCardsNum()
 	latitude := req.GetLatitude()
 	longitude := req.GetLongitude()
+	getTags := req.GetGetTags()
+	selectedTags := req.GetSelectedTags()
 	log.Println("GetRandomFood request received")
-	return GetRandomFood(int(cardsNum), float64(latitude), float64(longitude))
+	return GetRandomFood(int(cardsNum), float64(latitude), float64(longitude), getTags, selectedTags)
 }
 
 func (app *Config) gPRCListen() {

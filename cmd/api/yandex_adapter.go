@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 	proto "yandex-food/proto/generated"
@@ -20,6 +21,10 @@ const (
 	baseRestarauntUrl = "https://eda.yandex.ru/api/v2/catalog"
 	baseUrl           = "https://eda.yandex.ru"
 )
+
+type void struct{}
+
+var setMember void
 
 type restarauntData struct {
 	id   string
@@ -49,7 +54,58 @@ func doGetRequest(url string) (*gabs.Container, error) {
 	return jsonParsed, err
 }
 
-func getRestaraunts(latitude, longitude float64, num int) ([]restarauntData, error) {
+func extractTags(data *gabs.Container) ([]string, error) {
+	tagsSet := make(map[string]void)
+	tags := make([]string, 0, 100)
+
+	dataLen, err := data.ArrayCount()
+	if err != nil {
+		return nil, err
+	}
+
+	//var wg sync.WaitGroup
+	//wg.Add(dataLen)
+
+	for i := 0; i < dataLen; i++ {
+		//go func(*map[string]void, *gabs.Container, int) {
+		el, err := data.ArrayElement(i)
+		if err != nil {
+			continue
+		}
+
+		elementTags := el.Search("place", "tags")
+
+		tagsLen, err := elementTags.ArrayCount()
+		if err != nil {
+			continue
+		}
+
+		for i := 0; i < tagsLen; i++ {
+			tag, err := elementTags.ArrayElement(i)
+			if err != nil {
+				continue
+			}
+			tagStr, ok := tag.Search("name").Data().(string)
+			if !ok {
+				continue
+			}
+			tagStr = strings.ToLower(tagStr)
+
+			if _, ok := tagsSet[tagStr]; !ok {
+				tagsSet[tagStr] = setMember
+				tags = append(tags, tagStr)
+			}
+		}
+		//wg.Done()
+
+		//}(&tags, data, i)
+	}
+	//wg.Wait()
+
+	return tags, nil
+}
+
+func getRestaraunts(latitude, longitude float64, num int, getTags bool, selectedTags []string) ([]restarauntData, []string, error) {
 	log.Println("request restaraunts list")
 	u, _ := url.JoinPath(apiUrl, "catalog")
 	urlStruct, _ := url.Parse(u)
@@ -59,12 +115,21 @@ func getRestaraunts(latitude, longitude float64, num int) ([]restarauntData, err
 	urlStruct.RawQuery = q.Encode()
 	data, err := doGetRequest(urlStruct.String())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	data = data.Search("payload", "foundPlaces")
 	total, err := data.ArrayCount()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	tags := make([]string, 0)
+	if getTags {
+		tags, err = extractTags(data)
+		if err == nil {
+		} else {
+			log.Printf("failed to extract tags: %v", err)
+		}
 	}
 
 	restaraunts := make([]restarauntData, 0, num)
@@ -77,7 +142,7 @@ func getRestaraunts(latitude, longitude float64, num int) ([]restarauntData, err
 
 		restaraunts = append(restaraunts, extractRestarauntData(el))
 	}
-	return restaraunts, err
+	return restaraunts, tags, err
 }
 
 func getRestarauntMenu(slug string) (*gabs.Container, error) {
@@ -150,11 +215,14 @@ func checkDishData(data *gabs.Container) error {
 	return nil
 }
 
-func GetRandomFood(cardsNum int, latitude, longitude float64) (*proto.FoodResponse, error) {
-	restarauntDataArr, err := getRestaraunts(latitude, longitude, cardsNum)
+func GetRandomFood(cardsNum int, latitude, longitude float64, getTags bool, selectedTags []string) (*proto.FoodResponse, error) {
+	restarauntDataArr, tags, err := getRestaraunts(latitude, longitude, cardsNum, getTags, selectedTags)
 	if err != nil {
 		log.Printf("failed to get restaraunts: %v", err)
 		return &proto.FoodResponse{Succeed: false}, err
+	}
+	if !getTags || tags == nil {
+		tags = make([]string, 0)
 	}
 
 	// Take cardsNum food cards
@@ -192,7 +260,8 @@ func GetRandomFood(cardsNum int, latitude, longitude float64) (*proto.FoodRespon
 	log.Printf("got %d cards when %d were requested", len(foodCards), cardsNum)
 
 	return &proto.FoodResponse{
-		Succeed:   true,
-		FoodCards: foodCards,
+		Succeed:       true,
+		FoodCards:     foodCards,
+		AvailableTags: tags,
 	}, nil
 }
