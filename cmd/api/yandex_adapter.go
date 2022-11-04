@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	apiUrl            = "https://eda.yandex/api/v2"
-	baseRestarauntUrl = "https://eda.yandex.ru/api/v2/catalog"
-	baseUrl           = "https://eda.yandex.ru"
+	apiUrl                  = "https://eda.yandex/api/v2"
+	baseRestarauntUrl       = "https://eda.yandex.ru/api/v2/catalog"
+	baseUrl                 = "https://eda.yandex.ru"
+	baseRestarauntPublicUrl = "https://eda.yandex/restaurant/"
 )
 
 type void struct{}
@@ -182,7 +183,7 @@ func createFoodCard(data *gabs.Container, resData restarauntData) *proto.FoodCar
 	foodCard.Id = fmt.Sprintf("%d", int64(data.Search("id").Data().(float64)))
 	foodCard.RestarauntName = resData.name
 	foodCard.Price = float32(data.Search("price").Data().(float64))
-	foodCard.RestarauntUrl = resData.url
+	foodCard.RestarauntUrl = baseRestarauntPublicUrl + resData.slug
 
 	return &foodCard
 }
