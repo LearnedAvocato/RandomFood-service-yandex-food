@@ -32,14 +32,14 @@ func TestDoGetRequest(t *testing.T) {
 func TestGetRestaraunts(t *testing.T) {
 	// 1. Request 1 restaraunt
 	num := 1
-	restaraunts, err := getRestaraunts(testData.latitude, testData.longitude, num)
+	restaraunts, _, err := getRestaraunts(testData.latitude, testData.longitude, num, false, nil)
 	log.Println("qwe", len(restaraunts))
 	require.Nil(t, err, fmt.Sprintf("failed to get restaraunts: %v", err))
 	assert.Equal(t, num, len(restaraunts))
 
 	// 2. Request 3 restaraunts
 	num = 3
-	restaraunts, err = getRestaraunts(testData.latitude, testData.longitude, num)
+	restaraunts, _, err = getRestaraunts(testData.latitude, testData.longitude, num, false, nil)
 	require.Nil(t, err, fmt.Sprintf("failed to get restaraunts: %v", err))
 
 	assert.Equal(t, num, len(restaraunts))
@@ -54,14 +54,14 @@ func TestGetRestarauntMenu(t *testing.T) {
 
 func TestGetRandomFood(t *testing.T) {
 	// 1. Get 1 food card
-	foodResponse, err := GetRandomFood(1, testData.latitude, testData.longitude)
+	foodResponse, err := GetRandomFood(1, testData.latitude, testData.longitude, false, nil)
 	require.Nil(t, err, fmt.Sprintf("failed to get food cards: %v", err))
 	require.True(t, foodResponse.Succeed)
 	foodCards := foodResponse.FoodCards
 	require.Equal(t, 1, len(foodCards), "1 food card expected")
 
 	// 2. Get 3 food cards
-	foodResponse, err = GetRandomFood(3, testData.latitude, testData.longitude)
+	foodResponse, err = GetRandomFood(3, testData.latitude, testData.longitude, false, nil)
 	require.Nil(t, err, fmt.Sprintf("failed to get food cards: %v", err))
 	require.True(t, foodResponse.Succeed)
 	foodCards = foodResponse.FoodCards

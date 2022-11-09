@@ -174,12 +174,24 @@ func extractRestarauntData(data *gabs.Container) restarauntData {
 		slug: slug}
 }
 
+func fixDescription(desc *string) {
+	if desc == nil {
+		*desc = ""
+	}
+
+	i := strings.Index(*desc, "<br>")
+	if i >= 0 {
+		*desc = (*desc)[:i]
+	}
+}
+
 func createFoodCard(data *gabs.Container, resData restarauntData) *proto.FoodCard {
 	foodCard := proto.FoodCard{}
 	foodCard.Name, _ = data.Search("name").Data().(string)
 	foodCard.ImageUrl, _ = data.Search("picture", "uri").Data().(string)
 	foodCard.ImageUrl = baseUrl + foodCard.ImageUrl
 	foodCard.Description, _ = data.Search("description").Data().(string)
+	fixDescription(&foodCard.Description)
 	foodCard.Id = fmt.Sprintf("%d", int64(data.Search("id").Data().(float64)))
 	foodCard.RestarauntName = resData.name
 	foodCard.Price = float32(data.Search("price").Data().(float64))
