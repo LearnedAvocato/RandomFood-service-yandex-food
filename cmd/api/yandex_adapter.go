@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -21,6 +22,7 @@ const (
 	baseRestarauntUrl       = "https://eda.yandex.ru/api/v2/catalog"
 	baseUrl                 = "https://eda.yandex.ru"
 	baseRestarauntPublicUrl = "https://eda.yandex/restaurant/"
+	searchByTextUrl         = "https://eda.yandex.ru/eats/v1/full-text-search/v1/search"
 )
 
 type void struct{}
@@ -40,6 +42,27 @@ func doGetRequest(url string) (*gabs.Container, error) {
 	}
 
 	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	jsonParsed, err := gabs.ParseJSON(body)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonParsed, err
+}
+
+func doPostRequest(url, payload string) (*gabs.Container, error) {
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+	}
+
+	resp, err := client.Post(url, "	application/json", bytes.NewBuffer([]byte(payload)))
 	if err != nil {
 		return nil, err
 	}
@@ -114,11 +137,23 @@ func getRestaraunts(latitude, longitude float64, num int, getTags bool, selected
 	q.Set("latitude", fmt.Sprintf("%f", latitude))
 	q.Set("longitude", fmt.Sprintf("%f", longitude))
 	urlStruct.RawQuery = q.Encode()
-	data, err := doGetRequest(urlStruct.String())
+
+	payload := gabs.New()
+	payload.SetP(latitude, "location.latitude")
+	payload.SetP(longitude, "location.longitude")
+	payload.SetP("еда", "text")
+
+	data, err := doPostRequest(searchByTextUrl, payload.String())
 	if err != nil {
 		return nil, nil, err
 	}
-	data = data.Search("payload", "foundPlaces")
+
+	data, err = data.Search("blocks").ArrayElement(0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data = data.Search("payload")
 	total, err := data.ArrayCount()
 	if err != nil {
 		return nil, nil, err
@@ -163,9 +198,9 @@ func buildRestarauntUrl(slug string) string {
 }
 
 func extractRestarauntData(data *gabs.Container) restarauntData {
-	id, _ := data.Search("place", "id").Data().(float64)
-	name, _ := data.Search("place", "name").Data().(string)
-	slug, _ := data.Search("place", "slug").Data().(string)
+	id := 0 //data.Search("place", "id").Data().(float64)
+	name, _ := data.Search("title").Data().(string)
+	slug, _ := data.Search("slug").Data().(string)
 
 	return restarauntData{
 		id:   fmt.Sprintf("%d", int64(id)),
