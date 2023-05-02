@@ -168,9 +168,14 @@ func getRestaraunts(latitude, longitude float64, num int, getTags bool, selected
 		}
 	}
 
-	restaraunts := make([]restarauntData, 0, num)
+	respCardsNum := num
+	if total < num {
+		respCardsNum = total
+	}
+	log.Printf("%d cards requested, %d cards got from api, return %d cards", num, total, respCardsNum)
+	restaraunts := make([]restarauntData, 0, respCardsNum)
 
-	for _, i := range rand.Perm(total)[:num] {
+	for _, i := range rand.Perm(total)[:respCardsNum] {
 		el, err := data.ArrayElement(i)
 		if err != nil {
 			continue
