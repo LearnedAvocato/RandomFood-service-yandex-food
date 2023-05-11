@@ -282,9 +282,8 @@ func GetRandomFood(cardsNum int, latitude, longitude float64, getTags bool, sele
 	// 1 restaraunt - 1 card
 	foodCards := make([]*proto.FoodCard, 0, cardsNum)
 	var wg sync.WaitGroup
-	wg.Add(cardsNum)
+	wg.Add(len(restarauntDataArr))
 	for _, data := range restarauntDataArr {
-
 		go func(data restarauntData, foodCards *[]*proto.FoodCard) {
 			defer wg.Done()
 
@@ -295,7 +294,6 @@ func GetRandomFood(cardsNum int, latitude, longitude float64, getTags bool, sele
 			}
 
 			dish, err := extractRandomDish(menu)
-			//log.Println(dish.String())
 			if err != nil {
 				log.Printf("failed to get dishes for restaraunt with id %s and slug %s: %v", data.id, data.slug, err)
 				return
