@@ -4,7 +4,7 @@ The service requests data by Yandex.Eda API. Is a part of the Food Randomizer pr
 
 [Live demo](https://learned-avocato.ru/)
 
-Microservices-based app provides random food cards from the Yandex.Eda service
+Microservices-based app provides random food cards from the Yandex.Eda service.
 
 ### Stack:
 * **Backend:** Go, Docker, gRPC, microservices
