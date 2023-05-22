@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package food;
+package yandex_food;
 
-option go_package = "/proto";
+option go_package = "/yandex-food;yandex_food";
 
 message FoodCard {
     string name = 1;
@@ -47,5 +47,4 @@ message FoodFromCollectionResponse {
 
 service YandexFood {
     rpc GetRandomFood(FoodRequest) returns (FoodResponse);
-    rpc GetRandomFoodFromCollection(FoodFromCollectionRequest) returns (FoodFromCollectionResponse);
 }
