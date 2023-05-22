@@ -241,24 +241,29 @@ func createFoodCard(data *gabs.Container, resData restarauntData) *proto.FoodCar
 }
 
 // todo: process categories and filters
-func extractRandomDish(menu *gabs.Container) (*gabs.Container, error) {
-	categories, err := menu.Search("payload", "categories").Children()
-	if err != nil {
-		return nil, err
-	}
-	if len(categories) == 0 {
-		return nil, errors.New("empty categories")
-	}
-	randomCat := categories[rand.Intn(len(categories))]
+func extractRandomDishes(menu *gabs.Container, dishNum int) ([]*gabs.Container, error) {
+	dishesData := make([]*gabs.Container, 0, dishNum)
+	for i := 0; i < dishNum; i++ {
+		categories, err := menu.Search("payload", "categories").Children()
+		if err != nil {
+			continue
+		}
+		if len(categories) == 0 {
+			continue
+		}
+		randomCat := categories[rand.Intn(len(categories))]
 
-	dishes, err := randomCat.Search("items").Children()
-	if err != nil {
-		return nil, err
+		dishes, err := randomCat.Search("items").Children()
+		if err != nil {
+			continue
+		}
+		if len(dishes) == 0 {
+			continue
+		}
+
+		dishesData = append(dishesData, dishes[rand.Intn(len(dishes))])
 	}
-	if len(dishes) == 0 {
-		return nil, errors.New("empty dishes")
-	}
-	return dishes[rand.Intn(len(dishes))], nil
+	return dishesData, nil
 }
 
 func checkDishData(data *gabs.Container) error {
@@ -269,6 +274,8 @@ func checkDishData(data *gabs.Container) error {
 }
 
 func GetRandomFood(cardsNum int, latitude, longitude float64, getTags bool, selectedTags []string) (*proto.FoodResponse, error) {
+	log.Printf("User coordinates: {%f, %f}\n", latitude, longitude)
+
 	restarauntDataArr, tags, err := getRestaraunts(latitude, longitude, cardsNum, getTags, selectedTags)
 	if err != nil {
 		log.Printf("failed to get restaraunts: %v", err)
@@ -279,7 +286,11 @@ func GetRandomFood(cardsNum int, latitude, longitude float64, getTags bool, sele
 	}
 
 	// Take cardsNum food cards
-	// 1 restaraunt - 1 card
+	// 1 restaraunt - X card
+
+	cardsPerRestaraunt := cardsNum / len(restarauntDataArr)
+	log.Printf("Request %d cards per restaraunt, %d in total\n", cardsPerRestaraunt, cardsPerRestaraunt*len(restarauntDataArr))
+
 	foodCards := make([]*proto.FoodCard, 0, cardsNum)
 	var wg sync.WaitGroup
 	wg.Add(len(restarauntDataArr))
@@ -293,26 +304,33 @@ func GetRandomFood(cardsNum int, latitude, longitude float64, getTags bool, sele
 				return
 			}
 
-			dish, err := extractRandomDish(menu)
+			dishes, err := extractRandomDishes(menu, cardsPerRestaraunt)
 			if err != nil {
 				log.Printf("failed to get dishes for restaraunt with id %s and slug %s: %v", data.id, data.slug, err)
 				return
 			}
 
-			if err := checkDishData(dish); err != nil {
-				log.Printf("invalid dish data: %v", err)
-				return
-			}
+			for _, dish := range dishes {
+				if err := checkDishData(dish); err != nil {
+					log.Printf("invalid dish data: %v", err)
+					continue
+				}
 
-			*foodCards = append(*foodCards, createFoodCard(dish, data))
+				*foodCards = append(*foodCards, createFoodCard(dish, data))
+			}
 		}(data, &foodCards)
 	}
 	wg.Wait()
 	log.Printf("got %d cards when %d were requested", len(foodCards), cardsNum)
 
+	foodCardsPermuted := make([]*proto.FoodCard, 0, len(foodCards))
+	for _, i := range rand.Perm(len(foodCards)) {
+		foodCardsPermuted = append(foodCardsPermuted, foodCards[i])
+	}
+
 	return &proto.FoodResponse{
 		Succeed:       true,
-		FoodCards:     foodCards,
+		FoodCards:     foodCardsPermuted,
 		AvailableTags: tags,
 	}, nil
 }
