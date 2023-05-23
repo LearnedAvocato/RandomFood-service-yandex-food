@@ -1,4 +1,4 @@
-package main
+package yandex_food
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	proto "yandex-food/proto/generated"
+	desc "yandex-food/pkg/api/yandex-food"
 
 	"github.com/Jeffail/gabs"
 )
@@ -225,8 +225,8 @@ func fixDescription(desc *string) {
 	}
 }
 
-func createFoodCard(data *gabs.Container, resData restarauntData) *proto.FoodCard {
-	foodCard := proto.FoodCard{}
+func createFoodCard(data *gabs.Container, resData restarauntData) *desc.FoodCard {
+	foodCard := desc.FoodCard{}
 	foodCard.Name, _ = data.Search("name").Data().(string)
 	foodCard.ImageUrl, _ = data.Search("picture", "uri").Data().(string)
 	foodCard.ImageUrl = baseUrl + foodCard.ImageUrl
@@ -273,13 +273,13 @@ func checkDishData(data *gabs.Container) error {
 	return nil
 }
 
-func GetRandomFood(cardsNum int, latitude, longitude float64, getTags bool, selectedTags []string) (*proto.FoodResponse, error) {
+func getRandomFood(cardsNum int, latitude, longitude float64, getTags bool, selectedTags []string) (*desc.FoodResponse, error) {
 	log.Printf("User coordinates: {%f, %f}\n", latitude, longitude)
 
 	restarauntDataArr, tags, err := getRestaraunts(latitude, longitude, cardsNum, getTags, selectedTags)
 	if err != nil {
 		log.Printf("failed to get restaraunts: %v", err)
-		return &proto.FoodResponse{Succeed: false}, err
+		return &desc.FoodResponse{Succeed: false}, err
 	}
 	if !getTags || tags == nil {
 		tags = make([]string, 0)
@@ -291,11 +291,11 @@ func GetRandomFood(cardsNum int, latitude, longitude float64, getTags bool, sele
 	cardsPerRestaraunt := cardsNum / len(restarauntDataArr)
 	log.Printf("Request %d cards per restaraunt, %d in total\n", cardsPerRestaraunt, cardsPerRestaraunt*len(restarauntDataArr))
 
-	foodCards := make([]*proto.FoodCard, 0, cardsNum)
+	foodCards := make([]*desc.FoodCard, 0, cardsNum)
 	var wg sync.WaitGroup
 	wg.Add(len(restarauntDataArr))
 	for _, data := range restarauntDataArr {
-		go func(data restarauntData, foodCards *[]*proto.FoodCard) {
+		go func(data restarauntData, foodCards *[]*desc.FoodCard) {
 			defer wg.Done()
 
 			menu, err := getRestarauntMenu(data.slug)
@@ -323,12 +323,12 @@ func GetRandomFood(cardsNum int, latitude, longitude float64, getTags bool, sele
 	wg.Wait()
 	log.Printf("got %d cards when %d were requested", len(foodCards), cardsNum)
 
-	foodCardsPermuted := make([]*proto.FoodCard, 0, len(foodCards))
+	foodCardsPermuted := make([]*desc.FoodCard, 0, len(foodCards))
 	for _, i := range rand.Perm(len(foodCards)) {
 		foodCardsPermuted = append(foodCardsPermuted, foodCards[i])
 	}
 
-	return &proto.FoodResponse{
+	return &desc.FoodResponse{
 		Succeed:       true,
 		FoodCards:     foodCardsPermuted,
 		AvailableTags: tags,

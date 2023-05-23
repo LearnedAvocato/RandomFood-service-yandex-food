@@ -1,4 +1,4 @@
-package main
+package yandex_food
 
 import (
 	"fmt"
@@ -54,14 +54,14 @@ func TestGetRestarauntMenu(t *testing.T) {
 
 func TestGetRandomFood(t *testing.T) {
 	// 1. Get 1 food card
-	foodResponse, err := GetRandomFood(1, testData.latitude, testData.longitude, false, nil)
+	foodResponse, err := getRandomFood(1, testData.latitude, testData.longitude, false, nil)
 	require.Nil(t, err, fmt.Sprintf("failed to get food cards: %v", err))
 	require.True(t, foodResponse.Succeed)
 	foodCards := foodResponse.FoodCards
 	require.Equal(t, 1, len(foodCards), "1 food card expected")
 
 	// 2. Get 3 food cards
-	foodResponse, err = GetRandomFood(3, testData.latitude, testData.longitude, false, nil)
+	foodResponse, err = getRandomFood(3, testData.latitude, testData.longitude, false, nil)
 	require.Nil(t, err, fmt.Sprintf("failed to get food cards: %v", err))
 	require.True(t, foodResponse.Succeed)
 	foodCards = foodResponse.FoodCards
