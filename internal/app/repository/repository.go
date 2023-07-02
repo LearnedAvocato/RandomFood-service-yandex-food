@@ -2,9 +2,10 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"os"
 
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 const (
@@ -12,18 +13,24 @@ const (
 )
 
 type Repository struct {
-	client *pgx.Conn
+	client *pgxpool.Pool
 }
 
 func NewRepository(ctx context.Context) (*Repository, error) {
-	client, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_DSN"))
+
+	connConfig, err := pgxpool.ParseConfig(os.Getenv("DATABASE_DSN"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error parsing database config: %w", err)
 	}
 
-	return &Repository{client: client}, nil
+	connPool, err := pgxpool.ConnectConfig(ctx, connConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to database: %w", err)
+	}
+
+	return &Repository{client: connPool}, nil
 }
 
-func (r *Repository) Close(ctx context.Context) error {
-	return r.client.Close(ctx)
+func (r *Repository) Close() {
+	r.client.Close()
 }

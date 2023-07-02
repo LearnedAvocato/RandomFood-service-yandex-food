@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Panicf("failed to init repository: %v", err)
 	}
-	defer repo.Close(ctx)
+	defer repo.Close()
 
 	yandexFoodService := service.NewYandexFoodService(repo)
 	app := yandex_food.NewImplementation(yandexFoodService)
